@@ -1,0 +1,49 @@
+@startuml datamodel
+
+hide empty methods
+skinparam NoteBackgroundColor white
+
+class Entry {
+    DateTime date
+    String sender
+    String subject
+    Number value
+}
+
+class Rule {
+    Condition[] conditions
+    String categoryName  
+}
+note left of Rule::conditions
+    Conditions are combined
+    with ""and""
+end note
+
+class Category {
+    String name
+    String label
+    String color    
+}
+
+entity Condition {
+    Enum field
+    Enum operator
+    String pattern
+}
+
+Enum Field {
+    sender
+    subject
+}
+
+Enum Operator {
+    and
+    or
+}
+
+Rule::conditions  o--> Condition
+Rule::categoryName -- Category::name
+
+Condition::field -- Field
+Condition::operator -- Operator
+@enduml
