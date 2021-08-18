@@ -1,5 +1,18 @@
 const DateTime = luxon.DateTime;
 
+
+/**
+ * @typedef {Object} Condition
+ * @property {string} field
+ * @property {string} operator
+ * @property {RegExp} pattern
+ * 
+ * @typedef {Object} Rule
+ * @property {string} categoryName
+ * @property  {Condition[]} conditions
+ * 
+ * @returns {Promise<Rule[]>}
+ */
 async function buildRules() {
     const response = await fetch('./data/patterns.json');
     const rawPatterns = await response.json();
@@ -16,6 +29,12 @@ async function buildRules() {
         .flat();
 }
 
+/**
+ * @typedef {Object} Config
+ * @property {Rule[]} rules
+ * 
+ * @returns {Promise<Config>}
+ */
 async function loadConfig() {
     const response = await fetch('./data/config.json')
     let config = await response.json();
@@ -35,6 +54,15 @@ function parseGermanNumber(numberString) {
     );
 }
 
+/**
+ * @typedef {Object} Entry
+ * @property {luxon.DateTime} date
+ * @property {string} sender
+ * @property {string} subject
+ * @property {number} value
+ * 
+ * @returns {Promise<Entry[]>}
+ */
 async function loadData() {
     const response = await fetch('./data/example_diba.csv');
     const rawData = await response.text();
@@ -54,10 +82,51 @@ async function loadData() {
         });
 }
 
+/**
+ * 
+ * @param {Entry[]} entries 
+ * @returns {Entry[]} 
+ */
+function filterEntries(entries) {
+    return entries
+        .filter(e => e.value > 0);
+}
+
+/**
+ * 
+ * @param {Entry} entry 
+ * @param {Config} config 
+ * 
+ * @returns {string} The category of the entry or the default category
+ */
+function categoriseEnry(entry, config) {
+    const firstMatchingRule = config.rules
+        .find(r => r.conditions
+            .some(c => c.pattern.test(entry[c.field]))
+        );
+    return firstMatchingRule?.categoryName ?? '_default';
+}
+
+/**
+ * @typedef {Entry} CategorisedEntry
+ * @property {string} categoryName
+ * 
+ * @param {Entry[]} entries 
+ * @param {Config} config
+ * 
+ * @returns {CategorisedEntry[]} 
+ */
+function categoriseEntries(entries, config) {
+    entries.forEach(e => e.category = categoriseEnry(e, config));
+    return entries;
+}
+
 async function main() {
     const config = await loadConfig();
-    const data = await loadData();
-    console.log(data);
+    let entries = await loadData();
+    entries = filterEntries(entries);
+    entries = categoriseEntries(entries, config);
+    console.log(entries);
 }
 
 main();
