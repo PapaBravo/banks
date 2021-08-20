@@ -108,8 +108,7 @@ function categoriseEnry(entry, config) {
 }
 
 /**
- * @typedef {Entry} CategorisedEntry
- * @property {string} categoryName
+ * @typedef {Entry & {categoryName: string}} CategorisedEntry
  * 
  * @param {Entry[]} entries 
  * @param {Config} config
@@ -117,8 +116,39 @@ function categoriseEnry(entry, config) {
  * @returns {CategorisedEntry[]} 
  */
 function categoriseEntries(entries, config) {
-    entries.forEach(e => e.category = categoriseEnry(e, config));
+    entries.forEach(e => e.categoryName = categoriseEnry(e, config));
     return entries;
+}
+
+/**
+ * @typedef {Object} Statistic
+ * @property {number} cnt
+ * @property {number} total
+ * 
+ * @typedef {Map<string, Statistic>} Categorisation
+ * 
+ * @param {CategorisedEntry[]} entries 
+ * @param {luxon.Interval} interval
+ * 
+ * @returns {Categorisation} 
+ */
+function calculateStatisticForInterval(entries, interval) {
+    let result = {};
+
+    entries
+        .filter(e => interval.contains(e.date))
+        .forEach(e => {
+            const { categoryName: c, value: v } = e;
+            if (!result[c]) {
+                result[c] = {
+                    cnt: 0,
+                    total: 0
+                };
+            }
+            result[c].cnt += 1;
+            result[c].total += v;
+        });
+    return result;
 }
 
 async function main() {
@@ -126,10 +156,10 @@ async function main() {
     let entries = await loadData();
     entries = filterEntries(entries);
     entries = categoriseEntries(entries, config);
-    console.log(entries);
+
+    const testInterval = luxon.Interval.before(DateTime.now(), { months: 2 });
+    const res = calculateStatisticForInterval(entries, testInterval);
+    console.log(res);
 }
 
 main();
-
-
-
