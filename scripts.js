@@ -22,7 +22,10 @@ async function buildRules() {
                 categoryName: category,
                 conditions: [{
                     field: 'sender',
-                    pattern: new RegExp(pattern)
+                    pattern: new RegExp(pattern, 'iu')
+                }, {
+                    field: 'subject',
+                    pattern: new RegExp(pattern, 'iu')
                 }]
             }))
         })
@@ -104,7 +107,11 @@ function categoriseEnry(entry, config) {
         .find(r => r.conditions
             .some(c => c.pattern.test(entry[c.field]))
         );
-    return firstMatchingRule?.categoryName ?? '_default';
+    if (firstMatchingRule?.categoryName) {
+        return firstMatchingRule.categoryName;
+    } else {
+        return '_default';
+    }
 }
 
 /**
