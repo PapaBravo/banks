@@ -35,6 +35,9 @@ async function buildRules() {
 /**
  * @typedef {Object} Config
  * @property {Rule[]} rules
+ * @property {Object[]} categories
+ * @property {string} categories[].name
+ * @property {string} categories[].color
  * 
  * @returns {Promise<Config>}
  */
@@ -129,10 +132,10 @@ function categoriseEntries(entries, config) {
 
 /**
  * @typedef {Object} Statistic
- * @property {number} cnt
- * @property {number} total
+ * @property {number} cnt the number of entries in this category
+ * @property {number} total the total value in this category
  * 
- * @typedef {Map<string, Statistic>} Categorisation
+ * @typedef {Object<string, Statistic>} Categorisation
  * 
  * @param {CategorisedEntry[]} entries 
  * @param {luxon.Interval} interval
@@ -158,6 +161,37 @@ function calculateStatisticForInterval(entries, interval) {
     return result;
 }
 
+/**
+ * 
+ * @param {Categorisation} categorisation 
+ * @param {Config} config
+ */
+function plotCategorisation(categorisation, config) {
+    const categories = Object.keys(categorisation)
+        .map(c => {
+            const cat = config.categories.find(cc => cc.name === c);
+            if (!cat) {
+                console.warn('no configured category for', c)
+            }
+            return cat;
+        })
+        .filter(c => !!c);
+
+    const ctx = document.getElementById('chart');
+    let chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: categories.map(c => c.name),
+            datasets: [{
+                label: '# of Votes',
+                data: categories.map(c => categorisation[c.name].total),
+                backgroundColor: categories.map(c => c.color),
+                borderWidth: 1
+            }]
+        }
+    });
+}
+
 async function main() {
     const config = await loadConfig();
     let entries = await loadData();
@@ -166,7 +200,7 @@ async function main() {
 
     const testInterval = luxon.Interval.before(DateTime.now(), { months: 2 });
     const res = calculateStatisticForInterval(entries, testInterval);
-    console.log(res);
+    plotCategorisation(res, config)
 }
 
 main();
